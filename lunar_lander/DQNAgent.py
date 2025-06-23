@@ -12,7 +12,7 @@ from dqnModel import dqnModel
 from enum import Enum
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 from enum import Enum
-
+import os
 class DQNAGENT_MODE(Enum):
     EXPLORE="EXPLORE"
     EXPLOIT="EXPLOIT"
@@ -68,8 +68,8 @@ class DQNAgent:
         try:
             self.policy_net = dqnModel(self.n_observations, self.n_actions).to(self.device)
             self.target_net = dqnModel(self.n_observations, self.n_actions).to(self.device)
-            if model_class==None:
-                print("Create a new model to:")
+            if  not os.path.exists(model_class):
+                print("Path to model not found. Create a new model to:")
                 print(model_class)
                 self.target_net.load_state_dict(self.policy_net.state_dict())
             else:
@@ -160,7 +160,7 @@ class DQNAgent:
         plt.clf()
         plt.title('Result' if show_result else 'Training...')
         plt.xlabel('Episode')
-        plt.ylabel('Duration')
+        plt.ylabel('Score')
         plt.plot(durations_t.numpy())
         if len(durations_t) >= 100:
             means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
