@@ -4,7 +4,7 @@ import numpy
 from dqnModel import dqnModel
 import gymnasium as gym
 
-import lunar_lander.DQNAgent as DQNAgent
+import DQNAgent as DQNAgent
 
 
 
