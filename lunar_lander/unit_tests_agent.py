@@ -27,5 +27,8 @@ class test_DQNAgent(unittest.TestCase):
         self.assertIsInstance(self.agent.policy_net, dqnModel)
         self.assertIsInstance(self.agent.target_net, dqnModel)
 
+    #todo: unit tests on the agent functions select_action, optimize_model, soft_update, plot_duration, train, save, load 
+    #and test_demonstration 
+
 if __name__ == '__main__':
     unittest.main()
