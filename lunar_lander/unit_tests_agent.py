@@ -2,6 +2,7 @@ import unittest
 import DQNAgent
 import gymnasium as gym
 import dqnModel
+import torch
 
 class test_replayMemory(unittest.TestCase):
     def test_init_trivial(self):
@@ -26,6 +27,21 @@ class test_DQNAgent(unittest.TestCase):
     def test_agent_init(self):
         self.assertIsInstance(self.agent.policy_net, dqnModel)
         self.assertIsInstance(self.agent.target_net, dqnModel)
+
+    def test_select_action_state_output(self):
+        pass 
+
+    def test_select_action_state_not_tensor(self):
+        with self.assertRaises(TypeError):
+            self.agent.select_action(5)
+
+    def test_optimize_model(self):
+        pass
+
+    def test_soft_update(self):
+        pass
+
+    
 
     #todo: unit tests on the agent functions select_action, optimize_model, soft_update, plot_duration, train, save, load 
     #and test_demonstration 
