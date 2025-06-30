@@ -187,8 +187,7 @@ class DQNAgent:
         if self.mode==DQNAGENT_MODE.EXPLORE:
             sample = random.random()
             eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * self.steps_done / self.eps_decay)
-            steps_done = self.steps_done + 1
-            self.steps_done = steps_done
+            self.steps_done += 1
             if sample > eps_threshold:
                 with torch.no_grad():
                     return self.policy_net(state).max(1).indices.view(1, 1)
