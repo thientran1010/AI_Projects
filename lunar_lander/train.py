@@ -1,5 +1,5 @@
 import os
-os.chdir(r'C:\Users\MV\Downloads\SMBs\lunar_lander')
+os.chdir(r'/Users/leiladjeffal/github/AI_Projects/lunar_lander')
 import numpy
 from dqnModel import dqnModel
 import gymnasium as gym
@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -145,6 +145,8 @@ def optimize_model():
     # detailed explanation). This converts batch-array of Transitions
     # to Transition of batch-arrays.
     batch = Transition(*zip(*transitions))
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
 
     # Compute a mask of non-final states and concatenate the batch elements
     # (a final state would've been the one after which simulation ended)
@@ -154,7 +156,12 @@ def optimize_model():
                                                 if s is not None])
     state_batch = torch.cat(batch.state)
     action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
+    #reward_batch = torch.cat(batch.reward)
+    #reward_batch = torch.cat([torch.tensor(r) for r in batch.reward])
+    #reward_batch = torch.cat([torch.tensor([r], dtype=torch.float32) for r in batch.reward])
+    reward_batch = torch.tensor(batch.reward, dtype=torch.float32, device=device)
+
+
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
@@ -167,6 +174,8 @@ def optimize_model():
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    next_state_values = next_state_values.to(device)
+
     with torch.no_grad():
         next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
@@ -203,8 +212,9 @@ for i_episode in range(num_episodes):
         observation, reward, terminated, truncated, _ = env.step(action.item())
         
         
-        
-        reward = torch.tensor([reward], device=device)
+        # transforming from float64 to float32
+        #reward = reward.to(torch.float32)
+        reward = np.float32(reward)
         done = terminated or truncated
 
         if terminated:

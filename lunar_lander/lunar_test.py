@@ -2,7 +2,7 @@ import gymnasium as gym
 import numpy as np
 import random
 import pickle
-default_path=r"C:\Users\MV\Downloads\SMBs\lunar_lander"
+default_path=r"/Users/leiladjeffal/github/AI_Projects/lunar_lander"
 import os
 os.chdir(default_path)
 from dqnModel import dqnModel
@@ -15,6 +15,8 @@ device = torch.device(
     "mps" if torch.backends.mps.is_available() else
     "cpu"
 )
+
+#device = torch.device("cpu")
 
 # Initialise the environment
 env = gym.make("LunarLander-v3", render_mode="human")
@@ -31,8 +33,9 @@ n_actions = env.action_space.n
 n_observations = len(observation)
 
 target_net = dqnModel(n_observations, n_actions).to(device)
-target_net.load_state_dict(torch.load(model_path, weights_only=True))
-
+target_net.load_state_dict(
+    torch.load(model_path, weights_only=True, map_location=device)
+)
 for step in range(50):
     observation, info = env.reset()
     
