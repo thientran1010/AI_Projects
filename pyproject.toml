@@ -1,0 +1,19 @@
+[project]
+name = "lunar-lander-ai"
+version = "0.1.0"
+description = "Deep Q-Learning implementation for the OpenAI Gym LunarLander-v2 environment."
+authors = []
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.8"
+
+dependencies = [
+  "gymnasium==1.1.1",
+  "numpy==1.21.6",
+  "torch==1.11.0",
+  "matplotlib==3.5.1"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
