@@ -22,14 +22,16 @@ class test_replayMemory(unittest.TestCase):
 
 class test_DQNAgent(unittest.TestCase):
     def setUp(self):
-          self.agent = DQNAgent.DQNAgent(gym.make("LunarLander-v3",render_mode="human"), odel_class=r"dqnModel_lunar_lander.pt")
+          self.agent = DQNAgent.DQNAgent(gym.make("LunarLander-v3",render_mode="human"), model_class=r"dqnModel_lunar_lander.pt")
 
     def test_agent_init(self):
-        self.assertIsInstance(self.agent.policy_net, dqnModel)
-        self.assertIsInstance(self.agent.target_net, dqnModel)
+        self.assertIsInstance(self.agent.policy_net, dqnModel.dqnModel)
+        self.assertIsInstance(self.agent.target_net, dqnModel.dqnModel)
 
     def test_select_action_state_output(self):
-        pass 
+        state =  torch.rand(2,3)
+        output = self.agent.select_action(state)
+        self.assertIsInstance(output, torch.Tensor)
 
     def test_select_action_state_not_tensor(self):
         with self.assertRaises(TypeError):
@@ -41,10 +43,9 @@ class test_DQNAgent(unittest.TestCase):
     def test_soft_update(self):
         pass
 
-    
-
-    #todo: unit tests on the agent functions select_action, optimize_model, soft_update, plot_duration, train, save, load 
-    #and test_demonstration 
+    def test_train_param_not_int(self):
+        with self.assertRaises(TypeError):
+            self.agent.train('a')
 
 if __name__ == '__main__':
     unittest.main()
