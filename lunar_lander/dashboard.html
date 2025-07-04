@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Lunar Lander Live Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .metric-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #4CAF50;
+        }
+        .metric-label {
+            font-size: 1em;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .chart-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .chart-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running { background-color: #4CAF50; animation: pulse 2s infinite; }
+        .status-complete { background-color: #2196F3; }
+        .status-waiting { background-color: #f44336; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .last-status {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .instructions {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Lunar Lander Live Dashboard</h1>
+            <p><span class="status-indicator status-waiting" id="statusIndicator"></span>
+            <span id="statusText">Live monitoring active...</span></p>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Episode</div>
+                <div class="metric-value" id="currentEpisode">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Latest Score</div>
+                <div class="metric-value" id="latestScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Best Score</div>
+                <div class="metric-value" id="bestScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Average</div>
+                <div class="metric-value" id="avgScore">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Success Rate</div>
+                <div class="metric-value" id="successRate">-%</div>
+            </div>
+        </div>
+
+        <div class="last-status" id="lastStatus" style="display: none;">
+            <strong>Last Landing:</strong> <span id="lastStatusText">-</span>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">📈 Episode Scores (Live)</div>
+            <canvas id="scoreChart" width="400" height="200"></canvas>
+        </div>
+
+        <div class="instructions">
+            <p>🎮 Run <code>python3 simple_demo.py</code> to see live data</p>
+            <p>📊 Dashboard updates automatically every 2 seconds</p>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Episode Score',
+                        data: [],
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: 750,
+                        easing: 'easeInOutQuart'
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: 'white' }
+                        },
+                        x: { 
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: 'white' }
+                        }
+                    },
+                    plugins: { 
+                        legend: { labels: { color: 'white' } }
+                    }
+                }
+            });
+        }
+
+        // Update dashboard with fresh data
+        function updateDashboard(data) {
+            if (!data || !data.episodes) return;
+
+            // Update metrics
+            document.getElementById('currentEpisode').textContent = data.current_episode || '-';
+            document.getElementById('latestScore').textContent = data.scores && data.scores.length > 0 ? 
+                data.scores[data.scores.length - 1] : '-';
+            document.getElementById('bestScore').textContent = data.best_score || '-';
+            document.getElementById('avgScore').textContent = data.avg_score || '-';
+            document.getElementById('successRate').textContent = (data.success_rate || 0) + '%';
+
+            // Update status
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            if (data.status === 'running') {
+                indicator.className = 'status-indicator status-running';
+                statusText.textContent = `Live - Episode ${data.current_episode}`;
+            } else if (data.status === 'complete') {
+                indicator.className = 'status-indicator status-complete';
+                statusText.textContent = 'Demo completed!';
+            } else {
+                indicator.className = 'status-indicator status-waiting';
+                statusText.textContent = 'Waiting for demo data...';
+            }
+
+            // Show last landing status
+            if (data.last_status) {
+                document.getElementById('lastStatus').style.display = 'block';
+                document.getElementById('lastStatusText').textContent = data.last_status;
+            }
+
+            // Update chart with smooth animation
+            if (data.episodes && data.scores) {
+                chart.data.labels = data.episodes;
+                chart.data.datasets[0].data = data.scores;
+                chart.update('active');
+            }
+        }
+
+        // Load data from file
+        async function loadData() {
+            try {
+                const response = await fetch('demo_data.json?' + Date.now());
+                if (response.ok) {
+                    const data = await response.json();
+                    updateDashboard(data);
+                } else {
+                    // File doesn't exist - clear dashboard
+                    clearDashboard();
+                }
+            } catch (error) {
+                // File not found or demo not running - clear dashboard
+                clearDashboard();
+            }
+        }
+
+        // Clear dashboard when no data file exists
+        function clearDashboard() {
+            document.getElementById('currentEpisode').textContent = '-';
+            document.getElementById('latestScore').textContent = '-';
+            document.getElementById('bestScore').textContent = '-';
+            document.getElementById('avgScore').textContent = '-';
+            document.getElementById('successRate').textContent = '-%';
+            document.getElementById('lastStatus').style.display = 'none';
+            
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            indicator.className = 'status-indicator status-waiting';
+            statusText.textContent = 'Waiting for new demo...';
+            
+            // Clear chart
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.update();
+        }
+
+        // Initialize and start auto-refresh
+        initChart();
+        loadData();
+        setInterval(loadData, 2000); // Update every 2 seconds
+    </script>
+</body>
+</html>
