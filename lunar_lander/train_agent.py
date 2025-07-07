@@ -26,6 +26,7 @@ class TrainAgent:
            num_episodes (int): Number of episodes to train the agent.
            overwrite (bool): Whether to overwrite an existing model file.
            hparams (HParams): Object containing hyperparameters for the model.
+           progress_queue: Queue for sending training progress updates.
        """
     def __init__(
             self,
@@ -33,6 +34,8 @@ class TrainAgent:
             num_episodes: int = 50,
             overwrite: bool=False,
             hparams: HParams = None,
+            learning_rate: float = 0.001,
+            progress_queue=None,
     ):
         """
             Initializes the TrainAgent instance.
@@ -42,11 +45,14 @@ class TrainAgent:
                     num_episodes (int, optional): Number of episodes for training. Defaults to 50.
                     overwrite (bool, optional): If True, will delete and retrain existing model. Defaults to False.
                     hparams (HParams, optional): Optional hyperparameter object. Defaults to a new HParams instance.
+                    progress_queue: Queue for sending training progress updates.
                 """
         self.model_path = model_path
         self.num_episodes = num_episodes
         self.overwrite = overwrite
         self.hparams = hparams or HParams()  # Default fallback
+        self.learning_rate = learning_rate
+        self.progress_queue = progress_queue
 
     def train_agent(self):
         """
@@ -69,11 +75,25 @@ class TrainAgent:
 
 
 
+        if os.path.exists(self.model_path):
+            if self.overwrite:
+                print(f"Overwriting existing model at {self.model_path}...")
+                os.remove(self.model_path)
+            else:
+                print(f"Model already exists at {self.model_path}. Skipping training.")
+                return
+
         if self.num_episodes is None:
             self.num_episodes = 50
 
         env = gym.make("LunarLander-v3")
-        agent = DQNAgent(env=env, hparams=self.hparams,model_class=self.model_path)
+        agent = DQNAgent(
+            env=env,
+            hparams=self.hparams,
+            model_class=self.model_path,
+            lr=self.learning_rate,
+            progress_queue=self.progress_queue
+        )
         agent.train(num_episodes=self.num_episodes)
         agent.save(self.model_path)
         print("Training complete and model saved.")
