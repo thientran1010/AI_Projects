@@ -1,0 +1,5 @@
+# Directory where trained models are saved
+MODEL_SAVE_DIR=models/
+
+# Logging level
+LOG_LEVEL=debug

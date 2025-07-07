@@ -1,0 +1,5 @@
+model:
+  model_path: new_dqnModel_lunar_lander.pt
+  n_layers: 1
+  n_neurons: 128
+  num_episodes: 50
