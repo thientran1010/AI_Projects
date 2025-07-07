@@ -130,3 +130,24 @@ This project was built by a student team and is open to further development. If 
 
 - OpenAI Gym Team
 - PyTorch Contributors
+
+
+
+
+## 🆕 New Features
+
+### Live Monitoring Dashboard
+- Real-time episode tracking and performance metrics
+- Visual demo with live data export to JSON
+- Web dashboard for monitoring training progress
+
+**Usage:**
+```bash
+# Terminal 1: Start web server
+python3 -m http.server 8080
+
+# Terminal 2: Run visual demo  
+python3 visual_demo.py
+
+# Browser: Open dashboard
+http://localhost:8080/dashboard.html
