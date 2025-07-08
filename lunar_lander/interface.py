@@ -80,7 +80,7 @@ class TwoStageUI(ctk.CTk):
         
         self.elapsed_time_label = ctk.CTkLabel(status_frame, text="Elapsed Time: 0s")
         self.elapsed_time_label.pack(pady=5)
-        
+
         # Plots section
         plots_frame = ctk.CTkFrame(self.train_progress_frame)
         plots_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -139,6 +139,9 @@ class TwoStageUI(ctk.CTk):
         self.old_episode_lengths = []
         self.old_losses = []
         self.old_episodes = []
+
+        
+
 
     def start_training(self):
         try:
@@ -227,6 +230,7 @@ class TwoStageUI(ctk.CTk):
                 elif result[0] == 'episode_data':
                     _, episode, reward, avg_reward, episode_length, loss = result
                     self.update_plots(episode, reward, avg_reward, episode_length, loss)
+
         except queue.Empty:
             pass
 
@@ -328,15 +332,37 @@ class TwoStageUI(ctk.CTk):
 
             env.render()
             time.sleep(0.05)
+        
         env.close()
-
+        
+        return total_reward
 
 
     def show_agent_performance(self):
-        # Make sure the trained_agent exists and is loaded!
         if self.trained_agent is None:
             self.trained_agent = DQNAgent(model_path="ui_dqn_model.pt")
-        self.run_agent_in_env(self.trained_agent, "human", "Trained Agent Demo")
+
+        final_score = self.run_agent_in_env(self.trained_agent, "human", "Trained Agent Demo")
+
+        if final_score >= 200:
+            status = "SUCCESS"
+            color = "green"
+        else:
+            status = "FAIL"
+            color = "red"
+
+        # Create popup window
+        popup = ctk.CTkToplevel(self)
+        popup.title("Final Result")
+        popup.geometry("300x150")
+    
+        result_label = ctk.CTkLabel(popup, text=f"{status}\nScore: {final_score:.2f}", font=("Arial", 18))
+        result_label.pack(expand=True, pady=30)
+
+        # Optional: make sure popup stays on top
+        popup.lift()
+        popup.attributes("-topmost", True)
+
 
    
 
