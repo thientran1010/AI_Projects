@@ -63,6 +63,12 @@ class test_DQNAgent(unittest.TestCase):
         self.assertEqual(self.agent.n_neurons, self.params.get_n_neurons())
         self.assertEqual(self.agent.n_layers, self.params.get_n_layers())
 
+    def test_agent_init_default_hparams(self):
+        params = hparams.HParams()
+        agent = DQNAgent.DQNAgent(gym.make("LunarLander-v3",render_mode="human"), model_class=r"dqnModel_lunar_lander.pt")
+        self.assertEqual(agent.n_neurons, params.get_n_neurons())
+        self.assertEqual(agent.n_layers, params.get_n_layers())
+
     def test_select_action_state_output(self):
         state =  torch.rand(2,3)
         output = self.agent.select_action(state)
