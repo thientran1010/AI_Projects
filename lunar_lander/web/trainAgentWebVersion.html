@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🚀 Lunar Lander AI Controller</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+    .button-group {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    button {
+      background: #4caf50;
+      border: none;
+      color: white;
+      padding: 12px 25px;
+      margin: 0 10px;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    button:hover {
+      background: #45a049;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .charts-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    .chart-container {
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      flex: 1;
+    }
+    /* 让canvas宽度自适应容器宽度 */
+    .chart-container canvas {
+      display: block;
+      width: 100% !important;
+      height: 300px !important;
+      margin: 0 auto;
+    }
+    #status {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #ffeb3b;
+    }
+
+    /* 响应式，屏幕小于700px时改为上下排列 */
+    @media (max-width: 700px) {
+      .charts-row {
+        flex-direction: column;
+      }
+      .chart-container {
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Lunar Lander AI Controller</h1>
+
+    <div class="button-group">
+      <button id="startBtn">Start Training</button>
+      <button id="stopBtn">Stop Training</button>
+    </div>
+
+    <div id="status">Status: Waiting to start</div>
+
+    <div class="charts-row">
+      <div class="chart-container">
+        <h2>Reward over Episodes</h2>
+        <canvas id="rewardChart" width="600" height="300"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <h2>Loss over Steps</h2>
+        <canvas id="lossChart" width="600" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusDiv = document.getElementById("status");
+
+    startBtn.onclick = () => {
+      fetch('/train/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(res => res.json())
+      .then(data => {
+        statusDiv.textContent = "Status: Training started";
+        // 清空图表数据
+        rewardChart.data.labels = [];
+        rewardChart.data.datasets[0].data = [];
+        rewardChart.update();
+
+        lossChart.data.labels = [];
+        lossChart.data.datasets[0].data = [];
+        lossChart.update();
+      });
+    };
+
+    stopBtn.onclick = () => {
+      fetch('/train/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(res => res.json())
+      .then(data => {
+        statusDiv.textContent = "Status: Training stopping...";
+      });
+    };
+
+    const rewardChart = new Chart(document.getElementById('rewardChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Reward',
+          data: [],
+          borderColor: 'blue',
+          fill: false,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        color: 'white',
+        scales: {
+          x: {
+            title: { display: true, text: 'Episode', color: 'white' },
+            ticks: { color: 'white' }
+          },
+          y: {
+            title: { display: true, text: 'Reward', color: 'white' },
+            ticks: { color: 'white' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: 'white' }
+          }
+        }
+      }
+    });
+
+    const lossChart = new Chart(document.getElementById('lossChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Loss',
+          data: [],
+          borderColor: 'red',
+          fill: false,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        color: 'white',
+        scales: {
+          x: {
+            title: { display: true, text: 'Step', color: 'white' },
+            ticks: { color: 'white' }
+          },
+          y: {
+            title: { display: true, text: 'Loss', color: 'white' },
+            ticks: { color: 'white' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: 'white' }
+          }
+        }
+      }
+    });
+
+    const source = new EventSource('/stream/metrics');
+    source.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+
+        rewardChart.data.labels.push(data.episode);
+        rewardChart.data.datasets[0].data.push(data.reward);
+        rewardChart.update();
+
+        lossChart.data.labels.push(data.step);
+        lossChart.data.datasets[0].data.push(data.loss);
+        lossChart.update();
+      } catch (e) {
+        console.error('Invalid data:', event.data);
+      }
+    };
+  </script>
+</body>
+</html>
