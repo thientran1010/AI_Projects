@@ -1,0 +1,79 @@
+from flask import Flask, Response, request
+from queue import Queue
+import threading
+import time
+import sys, os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from train_agent import TrainAgent
+from hparams import HParams
+
+
+app = Flask(__name__)
+
+data_queue = Queue()
+training_thread = None
+training_stop_flag = False
+
+
+def run_training():
+    global training_stop_flag
+    print("Training started...")
+    hp = HParams()
+    trainer = TrainAgent(overwrite=True, hparams=hp)
+    
+    for episode in range(50):  
+        if training_stop_flag:
+            break
+        reward = episode * 3 + (episode % 4) * 5  
+        data = {
+            "episode": episode,
+            "reward": reward,
+            "status": "running" if episode < 49 else "complete"
+        }
+        data_queue.put(data)
+        time.sleep(1) 
+    
+    training_stop_flag = False  
+    print("Start real training (not sending rewards)...")
+    trainer.train_agent()  
+
+# SSE 
+@app.route("/stream/metrics")
+def stream_metrics():
+    def event_stream():
+        while True:
+            data = data_queue.get()
+            yield f"data: {data}\n\n"
+    return Response(event_stream(), mimetype="text/event-stream")
+
+# 启动训练
+@app.route("/train/start", methods=["POST"])
+def start_training():
+    global training_thread, training_stop_flag
+    if training_thread is None or not training_thread.is_alive():
+        training_stop_flag = False
+        training_thread = threading.Thread(target=run_training)
+        training_thread.start()
+        return {"message": "Training started"}
+    else:
+        return {"message": "Training is already running"}
+
+# 停止训练
+@app.route("/train/stop", methods=["POST"])
+def stop_training():
+    global training_stop_flag
+    training_stop_flag = True
+    return {"message": "Training stop requested"}
+
+
+# 主页，返回dashboard.html
+@app.route('/')
+def index():
+    return send_from_directory('.', 'trainAgentWebVersion.html')
+
+if __name__ == '__main__':
+    app.run(debug=True, threaded=True)
+    
+# if __name__ == "__main__":
+#     app.run(debug=True)

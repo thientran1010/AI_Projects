@@ -1,14 +1,13 @@
-# to run the webversion
-# using conda enviornment
-# pip install flask gym numpy
-# python trainAgentWebVersion.py
-
-
 from flask import Flask, Response, request, jsonify, send_from_directory
 import threading
 import time
 import json
 import queue
+import torch  
+from train_agent import TrainAgent
+from hparams import HParams
+import gymnasium as gym
+from DQNAgent import DQNAgent
 
 app = Flask(__name__)
 
@@ -18,29 +17,58 @@ training_stop_flag = False
 
 def train_agent(data_queue):
     global training_stop_flag
-    episode = 0
-    step = 0
-    while not training_stop_flag and episode < 100:
-        # 模拟数据
-        reward = episode * 5 + (episode % 3) * 2
-        loss = 1 / (episode + 1) + 0.1 * (episode % 5)  # 模拟 loss
-        
+
+    # Setup env and agent
+    env = gym.make("LunarLander-v3")
+    hparams = HParams()
+    agent = DQNAgent(env=env, hparams=hparams)
+
+    num_episodes = 100
+    for episode in range(num_episodes):
+        if training_stop_flag:
+            break
+
+        state, _ = env.reset()
+        state = agent.state_processor(state)
+        total_reward = 0
+        total_loss = 0
+        step = 0
+
+        while True:
+            action = agent.select_action(state)
+            obs, reward, terminated, truncated, _ = env.step(action.item())
+            done = terminated or truncated
+
+            reward_tensor = torch.tensor([reward], device=agent.device)
+            next_state = None if done else agent.state_processor(obs)
+
+            agent.memory.push(state, action, next_state, reward_tensor)
+            state = next_state
+            total_reward += reward
+
+            loss = agent.optimize_model()
+            if loss is not None:
+                total_loss += loss
+
+            agent.soft_update()
+            step += 1
+
+            if done:
+                break
+
+        # Send metrics to frontend
         data = {
             "episode": episode,
-            "reward": reward,
+            "reward": total_reward,
             "step": step,
-            "loss": loss,
-            "status": "running" if episode < 99 else "complete"
+            "loss": round(total_loss / max(step, 1), 4),
+            "status": "running" if episode < num_episodes - 1 else "complete"
         }
         data_queue.put(data)
-        
-        episode += 1
-        step += 100  # 假设每个 episode 有 100 steps
-        time.sleep(1)  # 模拟训练耗时
-    
+
     training_stop_flag = False
 
-# SSE事件流
+# SSE stream endpoint
 @app.route('/stream/metrics')
 def stream_metrics():
     def event_stream(q):
@@ -55,7 +83,7 @@ def stream_metrics():
     clients.append(q)
     return Response(event_stream(q), mimetype='text/event-stream')
 
-# 启动训练
+# Start training
 @app.route('/train/start', methods=['POST'])
 def start_training():
     global training_thread, training_stop_flag
@@ -68,14 +96,12 @@ def start_training():
 
     def training_func():
         train_agent(data_queue)
-        # 训练结束，给所有客户端发送complete状态
         for q in clients:
             q.put({"status": "complete"})
 
     training_thread = threading.Thread(target=training_func)
     training_thread.start()
 
-    # 启动线程读取数据队列，推送给客户端
     def broadcaster():
         while training_thread.is_alive():
             try:
@@ -88,17 +114,15 @@ def start_training():
 
     return jsonify({"message": "Training started"})
 
-# 停止训练
 @app.route('/train/stop', methods=['POST'])
 def stop_training():
     global training_stop_flag
     training_stop_flag = True
     return jsonify({"message": "Training stopping"})
 
-# 主页，返回dashboard.html
 @app.route('/')
 def index():
-    return send_from_directory('.', 'trainAgentWebVersion.html')
+    return send_from_directory('.', './web/trainAgentWebVersion.html')
 
 if __name__ == '__main__':
     app.run(debug=True, threaded=True)
