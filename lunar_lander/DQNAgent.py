@@ -112,7 +112,8 @@ class DQNAgent:
         lr: float = 1e-4,
         device: torch.device = None,
         state_processor=None,
-        hparams = None
+        hparams = None,
+        progress_queue = None,
     ):
         # Environment and device setup
         self.env = env
@@ -173,8 +174,10 @@ class DQNAgent:
         self.steps_done = 0
         self.episode_durations = []
 
+        self.progress_queue = progress_queue
+
         # Enable interactive plotting
-        plt.ion()
+        #plt.ion()
 
     def select_action(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -251,7 +254,7 @@ class DQNAgent:
                 + self.target_net.state_dict()[key] * (1 - self.tau)
             )
 
-    plt.ion()
+    #plt.ion()
 
     def plot_durations(self, show_result: bool = False):
         """
@@ -271,7 +274,7 @@ class DQNAgent:
             means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
             means = torch.cat((torch.zeros(99), means))
             plt.plot(means.numpy())
-        plt.pause(0.001)
+        #plt.pause(0.001)
 
     # loss curve plot function <---- new
     def plot_loss_curve(self, loss_history):
@@ -300,7 +303,7 @@ class DQNAgent:
             plt.legend()
             plt.grid(True, alpha=0.3)
 
-        plt.show()
+        #plt.show()
 
 
     def train(self, num_episodes: int):
@@ -341,19 +344,27 @@ class DQNAgent:
                   loss_history.append(loss)
 
                 self.soft_update()
-
-
                 if done:
                     self.episode_durations.append(total_reward)
-                    self.plot_durations()
+                    #self.plot_durations()
                     break
+            # CALCULATE MOVING AVERAGE
+            if len(self.episode_durations) >= 100:
+                avg_reward = sum(self.episode_durations[-100:]) / 100
+            else:
+                avg_reward = sum(self.episode_durations) / len(self.episode_durations)
 
-        plt.ioff()
+            # Send to queue as plain numbers, not tensors!
+            if self.progress_queue is not None:
+                self.progress_queue.put((
+                    'episode_data',
+                    episode,                  # episode number
+                    float(total_reward),      # episode total reward
+                    float(avg_reward),        # moving avg 
+                    t + 1,                    # episode length (number of steps)
+                    float(loss) if loss is not None else None
+                ))
 
-        # added lines to show the final plots of reward and loss curves
-        self.plot_durations(show_result=True)
-        self.plot_loss_curve(loss_history)
-        plt.show()
 
 
 
@@ -418,10 +429,19 @@ class DQNAgent:
                 print(sumRe/avg_interval)
                 sumRe=0
             if step == num_steps -1:
-              self.plot_durations(show_result=True)
-              plt.ioff()
-              plt.tight_layout()
-              plt.show()
+              #self.plot_durations(show_result=True)
+              #plt.ioff()
+              #plt.tight_layout()
+              #plt.show()
+              self.progress_queue.put((
+                'episode_data',
+                step,
+                reward,
+                avg_reward,
+                cuRe,
+                self.episode_durations[-1] if self.episode_durations else 0,
+                ))
+
               input("Press Enter to continue...")
 
 
